@@ -7,32 +7,32 @@ interface User {
   room: string;
 }
 
-// let userCount = 0;
-
-let allSockets: WebSocket[] = [];
+let allSockets: User[] = [];
 
 wss.on("connection", (socket) => {
-  allSockets.push(socket);
-  userCount += 1;
-  console.log("User Connected #" + userCount);
-
   socket.on("message", (message) => {
-    console.log(message.toString());
-    if (allSockets.length > 0) {
-      allSockets.forEach((current) => {
-        current.send(message.toString() + ": Message sent from the User");
-      });
-      // for (let i = 0; i < allSockets.length; i++) {
-      //   allSockets[i].send(message.toString() + ": Message sent from the User");
-      // }
-    }
+    //@ts-ignore
+    const parsedMessage = JSON.parse(message);
 
-    // socket.send(message.toString() + ": Message sent from the User");
+    if (parsedMessage.type === "join") {
+      allSockets.push({ socket, room: parsedMessage?.payload?.roomId });
+      console.log(allSockets);
+    }
+    if (parsedMessage.type === "chat") {
+      let currentUser;
+      currentUser = allSockets.find((e) => e.socket == socket);
+      for (let i = 0; i < allSockets.length; i++) {
+        //@ts-ignore
+        if (allSockets[i].room === currentUser?.room) {
+          allSockets[i]?.socket.send(parsedMessage?.payload?.message);
+        }
+      }
+    }
   });
 
   socket.on("disconnect", () => {
     allSockets = allSockets.filter((e) => {
-      e !== socket;
+      e.socket !== socket;
     });
   });
 });

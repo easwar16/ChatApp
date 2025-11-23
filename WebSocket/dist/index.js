@@ -1,22 +1,29 @@
 import { WebSocketServer, WebSocket } from "ws";
 const wss = new WebSocketServer({ port: 8080 });
-let userCount = 0;
 let allSockets = [];
 wss.on("connection", (socket) => {
-    allSockets.push(socket);
-    userCount += 1;
-    console.log("User Connected #" + userCount);
     socket.on("message", (message) => {
-        console.log(message.toString());
-        if (allSockets.length > 0) {
-            allSockets.forEach((current) => {
-                current.send(message.toString() + ": Message sent from the User");
-            });
-            // for (let i = 0; i < allSockets.length; i++) {
-            //   allSockets[i].send(message.toString() + ": Message sent from the User");
-            // }
+        //@ts-ignore
+        const parsedMessage = JSON.parse(message);
+        if (parsedMessage.type === "join") {
+            allSockets.push({ socket, room: parsedMessage?.payload?.roomId });
+            console.log(allSockets);
         }
-        // socket.send(message.toString() + ": Message sent from the User");
+        if (parsedMessage.type === "chat") {
+            let currentUser;
+            currentUser = allSockets.find((e) => e.socket == socket);
+            for (let i = 0; i < allSockets.length; i++) {
+                //@ts-ignore
+                if (allSockets[i].room === currentUser?.room) {
+                    allSockets[i]?.socket.send(parsedMessage?.payload?.message);
+                }
+            }
+        }
+    });
+    socket.on("disconnect", () => {
+        allSockets = allSockets.filter((e) => {
+            e.socket !== socket;
+        });
     });
 });
 //# sourceMappingURL=index.js.map
